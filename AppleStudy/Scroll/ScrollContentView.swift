@@ -10,6 +10,7 @@ import SwiftUI
 struct ScrollContentView: View {
     @State var phase: ScrollPhase?
     @State private var isNewlyVisibleItemId: SomeItem.ID? // 스크롤 영역에서 "보이기 시작한" 아이템의 ID
+    @State var firstItem: SomeItem?
     
     var body: some View {
         VStack {
@@ -29,6 +30,10 @@ struct ScrollContentView: View {
                                 print("[\(item.id)] isVisible: \(isVisible)  ")
                                 if isVisible {
                                     isNewlyVisibleItemId = item.id
+                                    if let lastItem = SomeItem.previewItem.last, lastItem.id == item.id {
+                                        print("last")
+                                        print("more activities...")
+                                    }
                                 }
                             }
                     }
@@ -48,7 +53,7 @@ struct SomeItem: Identifiable {
     
     static let previewItem = {
         var items = [SomeItem]()
-        for i in 0..<10 {
+        for i in 0..<100 {
             items.append(SomeItem(id: i))
         }
         return items
