@@ -11,12 +11,20 @@ struct ScrollContentView: View {
     @State var phase: ScrollPhase?
     @State private var isNewlyVisibleItemId: SomeItem.ID? // 스크롤 영역에서 "보이기 시작한" 아이템의 ID
     @State var firstItem: SomeItem?
+    @State var seletedDate: Date?
     
     var body: some View {
         VStack {
             if let phase {
                 Text("phase: \(phase)")
             }
+            DatePicker("날짜 선택", selection: Binding(
+                get: { seletedDate ?? Date() },
+                set: { newDate in
+                    seletedDate = newDate
+                    print("selected")
+                }
+            ), displayedComponents: .date)
             ScrollView {
                 LazyVStack {
                     ForEach(SomeItem.previewItem) { item in
@@ -49,14 +57,18 @@ struct ScrollContentView: View {
 
 struct SomeItem: Identifiable {
     let id: Int
-    let text: String = "Item"
+    let date: Date
     
-    static let previewItem = {
-        var items = [SomeItem]()
-        for i in 0..<100 {
-            items.append(SomeItem(id: i))
-        }
-        return items
+    // 예: 오늘부터 과거로 100일치
+    static let previewItem: [SomeItem] = {
+        let calendar = Calendar.current
+        let startDate = Date()  // 또는 특정 기준 날짜(DateComponents로 생성)
+        return (0..<100)
+            .map { offset in
+                let d = calendar.date(byAdding: .day, value: -offset, to: startDate)!
+                return SomeItem(id: offset, date: d)
+            }
+            // 최신일자부터 과거일자 순으로 정렬(여기선 이미 offset=0이 최신)
     }()
 }
 
@@ -68,7 +80,7 @@ struct SomeItemView: View {
     }
     
     var body: some View {
-        Text("\(item.text) \(item.id)")
+        Text("\(item.date) \(item.id)")
     }
 }
 
