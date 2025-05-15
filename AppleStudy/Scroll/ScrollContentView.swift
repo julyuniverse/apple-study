@@ -10,23 +10,20 @@ import SwiftUI
 struct ScrollContentView: View {
     @State var phase: ScrollPhase?
     @State private var isNewlyVisibleItemId: SomeItem.ID? // 스크롤 영역에서 "보이기 시작한" 아이템의 ID
+    @State private var scrollId: SomeItem.ID?
     @State var selectedDate = Date()
     @State var firstItemDate = Date()
     var items: [SomeItem] = SomeItem.previewItem
+    @State private var showDatePicker = false
     
     var body: some View {
         VStack {
             if let phase {
                 Text("phase: \(phase)")
             }
-            DatePicker("날짜 선택", selection: Binding(
-                get: { selectedDate },
-                set: { newDate in
-                    selectedDate = newDate
-                    firstItemDate = newDate
-                    print("selected: \(String(describing: selectedDate))")
-                }
-            ), displayedComponents: .date)
+            Button("날짜 선택") {
+                showDatePicker = true
+            }
             ScrollView {
                 LazyVStack {
                     ForEach(items) { item in
@@ -53,7 +50,34 @@ struct ScrollContentView: View {
                             }
                     }
                 }
+                .scrollTargetLayout()
             }
+            .scrollPosition(id: $scrollId, anchor: .top)
+        }
+        .sheet(isPresented: $showDatePicker) {
+            VStack {
+                DatePicker("날짜 선택", selection: Binding(
+                    get: { selectedDate },
+                    set: { newDate in
+                        selectedDate = newDate
+                        firstItemDate = newDate
+                        print("selected: \(String(describing: selectedDate))")
+                        
+                        // 선택한 날짜와 일치하는 아이템 찾기
+                        if let targetItem = items.first(where: {
+                            Calendar.current.isDate($0.date, inSameDayAs: newDate)
+                        }) {
+                            scrollId = targetItem.id
+                        } else {
+                            print("해당 날짜에 맞는 아이템이 없습니다.")
+                        }
+                        showDatePicker = false // 날짜 선택 후 자동으로 닫힘
+                    }
+                ), displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding()
+            }
+            .presentationDetents([.medium]) // 팝업 높이 조절
         }
         .onScrollPhaseChange { oldPhase, newPhase, context in
             print("old: \(oldPhase) -> new: \(newPhase)")
@@ -69,7 +93,7 @@ struct SomeItem: Identifiable {
     // 예: 오늘부터 과거로 100일치
     static let previewItem: [SomeItem] = {
         let calendar = Calendar.current
-        let startDate = Date()  // 또는 특정 기준 날짜(DateComponents로 생성)
+        let startDate = Date() // 또는 특정 기준 날짜(DateComponents로 생성)
         return (0..<100)
             .map { offset in // 최신일자부터 과거일자 순으로 정렬(여기선 이미 offset=0이 최신)
                 let d = calendar.date(byAdding: .day, value: -offset, to: startDate)!
