@@ -15,15 +15,29 @@ struct ScrollContentView: View {
     @State var firstItemDate = Date()
     var items: [SomeItem] = SomeItem.previewItem
     @State private var showDatePicker = false
+    @State private var isBeyondZero: Bool = false // 이 State 변숫값이 변경되면 뷰의 body 계산이 이루어짐
+    @State private var showStatusBar = false
     
     var body: some View {
         VStack {
             if let phase {
                 Text("phase: \(phase)")
             }
+            Text("scroll is beyond zero: \(isBeyondZero)")
             Button("날짜 선택") {
                 showDatePicker = true
             }
+            HStack(spacing: 20) {
+                Text("Status Bar")
+                Text("Status Bar")
+                Text("Status Bar")
+                Text("Status Bar")
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: showStatusBar || items.count == 0 ? 100 : 0)
+            .background(.blue)
+            .clipped()
+            .animation(.easeInOut(duration: 0.2), value: showStatusBar)
             ScrollView {
                 LazyVStack {
                     ForEach(items) { item in
@@ -53,6 +67,15 @@ struct ScrollContentView: View {
                 .scrollTargetLayout()
             }
             .scrollPosition(id: $scrollId, anchor: .top)
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                print("contentOffset", geometry.contentOffset)
+                print("contentInsets", geometry.contentInsets)
+                print("contentSize", geometry.contentSize)
+                print("containerSize", geometry.containerSize)
+                return geometry.contentOffset.y
+            } action: { oldValue, newValue in
+                print("old:", oldValue, "new", newValue)
+            }
         }
         .sheet(isPresented: $showDatePicker) {
             VStack {
