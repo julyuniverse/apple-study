@@ -16,7 +16,9 @@ struct ScrollContentView: View {
     var items: [SomeItem] = SomeItem.previewItem
     @State private var showDatePicker = false
     @State private var isBeyondZero: Bool = false // 이 State 변숫값이 변경되면 뷰의 body 계산이 이루어짐
-    @State private var showStatusBar = false
+    @State private var showStatusBar = true
+    @State private var lastOffset: CGFloat = 0.0
+    @State var contentSizeHeight: CGFloat = 0.0
     
     var body: some View {
         VStack {
@@ -37,7 +39,6 @@ struct ScrollContentView: View {
             .frame(height: showStatusBar || items.count == 0 ? 100 : 0)
             .background(.blue)
             .clipped()
-            .animation(.easeInOut(duration: 0.2), value: showStatusBar)
             ScrollView {
                 LazyVStack {
                     ForEach(items) { item in
@@ -67,16 +68,27 @@ struct ScrollContentView: View {
                 .scrollTargetLayout()
             }
             .scrollPosition(id: $scrollId, anchor: .top)
+//            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+//                geometry.contentSize.height
+//            } action: { oldValue, newValue in
+//                print("old:", oldValue, "new", newValue)
+//                contentSizeHeight = newValue
+//            }
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                print("contentOffset", geometry.contentOffset)
-                print("contentInsets", geometry.contentInsets)
-                print("contentSize", geometry.contentSize)
-                print("containerSize", geometry.containerSize)
-                return geometry.contentOffset.y
+                geometry.contentOffset.y
             } action: { oldValue, newValue in
                 print("old:", oldValue, "new", newValue)
+                if newValue >= 0 {
+                    if (newValue - lastOffset <= 0.0) {
+                        showStatusBar = true
+                    } else {
+                        showStatusBar = false
+                    }
+                    lastOffset = newValue
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: showStatusBar)
         .sheet(isPresented: $showDatePicker) {
             VStack {
                 DatePicker("날짜 선택", selection: Binding(
