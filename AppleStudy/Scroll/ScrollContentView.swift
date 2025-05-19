@@ -19,9 +19,10 @@ struct ScrollContentView: View {
     @State private var showStatusBar = true
     @State private var lastOffset: CGFloat = 0.0
     @State var contentSizeHeight: CGFloat = 0.0
+    @State var containerSizeHeight: CGFloat = 0.0
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             if let phase {
                 Text("phase: \(phase)")
             }
@@ -68,17 +69,27 @@ struct ScrollContentView: View {
                 .scrollTargetLayout()
             }
             .scrollPosition(id: $scrollId, anchor: .top)
-//            .onScrollGeometryChange(for: CGFloat.self) { geometry in
-//                geometry.contentSize.height
-//            } action: { oldValue, newValue in
-//                print("old:", oldValue, "new", newValue)
-//                contentSizeHeight = newValue
-//            }
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentSize.height
+            } action: { oldValue, newValue in
+                contentSizeHeight = newValue
+            }
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.containerSize.height
+            } action: { oldValue, newValue in
+                containerSizeHeight = newValue
+            }
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
                 geometry.contentOffset.y
             } action: { oldValue, newValue in
-                print("old:", oldValue, "new", newValue)
-                if newValue >= 0 {
+                // 임계값을 설정하여 미세한 변화 무시 (예: 1.0)
+                let threshold: CGFloat = 1.0
+
+                // 미세 변화는 무시
+                if abs(newValue - oldValue) < threshold {
+                    return
+                }
+                if newValue >= 0 && newValue <= abs(contentSizeHeight - containerSizeHeight) && phase == .interacting {
                     if (newValue - lastOffset <= 0.0) {
                         showStatusBar = true
                     } else {
