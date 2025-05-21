@@ -38,7 +38,9 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
     private var lastOffset: CGPoint = .zero
     private var lastValidDirection: String = "정지"
     private var items: [Item] = []
-    private var wasBouncing: Bool = false // 이전 상태가 바운스였는지 추적
+    private var wasBouncing: Bool = false
+    private var lastUpdateTime: Date = .distantPast // 마지막 방향 업데이트 시간
+    private let debounceInterval: TimeInterval = 0.1 // 디바운스 간격 (100ms)
 
     init(scrollDirection: Binding<String>, items: [Item]) {
         self._scrollDirection = scrollDirection
@@ -86,6 +88,7 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let currentOffset = scrollView.contentOffset
         let delta = currentOffset.y - lastOffset.y
+        let currentTime = Date()
 
         // 바운스 영역 감지
         let contentHeight = scrollView.contentSize.height
@@ -107,26 +110,27 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
             wasBouncing = true
         } else {
             // 정상 스크롤 영역
-            // 바운스에서 정상 영역으로 전환 시 delta 무시
             if wasBouncing && abs(delta) < 1.0 {
-                // 작은 delta는 바운스 종료로 간주, 방향 유지
+                // 바운스에서 정상 영역으로 전환 시 작은 delta 무시
                 if scrollDirection != lastValidDirection {
                     scrollDirection = lastValidDirection
                     logScrollDirection(lastValidDirection)
                 }
             } else {
-                // 유효한 스크롤 동작
-                let newDirection = if delta > 1.0 {
+                // 유효한 스크롤 동작, 디바운스 적용
+                let newDirection = if delta > 0.5 {
                     "위로 스크롤"
-                } else if delta < -1.0 {
+                } else if delta < -0.5 {
                     "아래로 스크롤"
                 } else {
-                    "정지"
+                    lastValidDirection // 기존 방향 유지
                 }
 
-                if newDirection != lastValidDirection {
+                // 디바운스: 마지막 업데이트 후 100ms 이내에는 방향 변경 무시
+                if newDirection != lastValidDirection && currentTime.timeIntervalSince(lastUpdateTime) > debounceInterval {
                     lastValidDirection = newDirection
                     scrollDirection = newDirection
+                    lastUpdateTime = currentTime
                     logScrollDirection(newDirection)
                 }
             }
@@ -164,7 +168,6 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
         print("Scroll direction logged: \(direction) at \(Date())")
     }
 }
-
 
 struct ScrollContent2View: View {
     @State private var scrollDirection: String = "정지"
