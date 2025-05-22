@@ -18,12 +18,12 @@ struct Item: Identifiable {
 struct ScrollViewWithDirection: UIViewControllerRepresentable {
     @Binding var scrollDirection: String
     let items: [Item]
-
+    
     func makeUIViewController(context: Context) -> ScrollViewController {
         let controller = ScrollViewController(scrollDirection: $scrollDirection, items: items)
         return controller
     }
-
+    
     func updateUIViewController(_ uiViewController: ScrollViewController, context: Context) {
         uiViewController.updateScrollDirection($scrollDirection)
         uiViewController.updateItems(items)
@@ -41,20 +41,20 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
     private var wasBouncing: Bool = false
     private var lastUpdateTime: Date = .distantPast // 마지막 방향 업데이트 시간
     private let debounceInterval: TimeInterval = 0.1 // 디바운스 간격 (100ms)
-
+    
     init(scrollDirection: Binding<String>, items: [Item]) {
         self._scrollDirection = scrollDirection
         self.items = items
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         // UIScrollView 설정
         scrollView = UIScrollView()
         scrollView.delegate = self
@@ -66,7 +66,7 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
-
+        
         // UIStackView 설정
         stackView = UIStackView()
         stackView.axis = .vertical
@@ -80,16 +80,16 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
             stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
-
+        
         // 초기 항목 렌더링
         updateStackView()
     }
-
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let currentOffset = scrollView.contentOffset
         let delta = currentOffset.y - lastOffset.y
         let currentTime = Date()
-
+        
         // 바운스 영역 감지
         let contentHeight = scrollView.contentSize.height
         let viewHeight = scrollView.bounds.height
@@ -97,10 +97,10 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
         let isBouncingAtTop = currentOffset.y < 0
         let isBouncingAtBottom = currentOffset.y > maxOffsetY
         let isBouncing = isBouncingAtTop || isBouncingAtBottom
-
+        
         // 디버깅 로그
         print("Offset: \(currentOffset.y), Delta: \(delta), isBouncingAtTop: \(isBouncingAtTop), isBouncingAtBottom: \(isBouncingAtBottom), LastValidDirection: \(lastValidDirection), wasBouncing: \(wasBouncing)")
-
+        
         if isBouncing {
             // 바운스 영역에서는 lastValidDirection 유지
             if scrollDirection != lastValidDirection {
@@ -125,7 +125,7 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
                 } else {
                     lastValidDirection // 기존 방향 유지
                 }
-
+                
                 // 디바운스: 마지막 업데이트 후 100ms 이내에는 방향 변경 무시
                 if newDirection != lastValidDirection && currentTime.timeIntervalSince(lastUpdateTime) > debounceInterval {
                     lastValidDirection = newDirection
@@ -136,16 +136,16 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
             }
             wasBouncing = false
         }
-
+        
         lastOffset = currentOffset
     }
-
+    
     // 항목 업데이트
     func updateItems(_ newItems: [Item]) {
         self.items = newItems
         updateStackView()
     }
-
+    
     private func updateStackView() {
         // 기존 뷰 제거
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
@@ -158,11 +158,11 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
             stackView.addArrangedSubview(label)
         }
     }
-
+    
     func updateScrollDirection(_ direction: Binding<String>) {
         self._scrollDirection = direction
     }
-
+    
     // 스크롤 방향 로깅
     private func logScrollDirection(_ direction: String) {
         print("Scroll direction logged: \(direction) at \(Date())")
@@ -172,7 +172,7 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
 struct ScrollContent2View: View {
     @State private var scrollDirection: String = "정지"
     @State private var items: [Item] = []
-
+    
     var body: some View {
         ZStack {
             ScrollViewWithDirection(scrollDirection: $scrollDirection, items: items)
