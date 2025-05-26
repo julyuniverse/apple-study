@@ -31,16 +31,16 @@ struct ScrollViewWithDirection: UIViewControllerRepresentable {
 }
 
 // ScrollViewController
-class ScrollViewController: UIViewController, UIScrollViewDelegate {
-    private var scrollView: UIScrollView!
-    private var stackView: UIStackView!
+class ScrollViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+    private var tableView: UITableView!
     @Binding var scrollDirection: String
     private var lastOffset: CGPoint = .zero
     private var lastValidDirection: String = "정지"
     private var items: [Item] = []
     private var wasBouncing: Bool = false
-    private var lastUpdateTime: Date = .distantPast // 마지막 방향 업데이트 시간
-    private let debounceInterval: TimeInterval = 0.1 // 디바운스 간격 (100ms)
+    private var lastUpdateTime: Date = .distantPast
+    private let debounceInterval: TimeInterval = 0.1 // 100ms 디바운스
+    private let deltaThreshold: CGFloat = 0.5 // 방향 변경 임계값
     
     init(scrollDirection: Binding<String>, items: [Item]) {
         self._scrollDirection = scrollDirection
@@ -55,36 +55,41 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // UIScrollView 설정
-        scrollView = UIScrollView()
-        scrollView.delegate = self
-        view.addSubview(scrollView)
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        // UITableView 설정
+        tableView = UITableView()
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        view.addSubview(tableView)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
         
-        // UIStackView 설정
-        stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.spacing = 8
-        scrollView.addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
-        ])
-        
-        // 초기 항목 렌더링
-        updateStackView()
+        // 초기 데이터 로드
+        tableView.reloadData()
     }
     
+    // UITableViewDataSource
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return items.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+        cell.textLabel?.text = items[indexPath.row].title
+        cell.textLabel?.textAlignment = .center
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 100 // 항목 높이
+    }
+    
+    // UIScrollViewDelegate (UITableView는 UIScrollView 기반)
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let currentOffset = scrollView.contentOffset
         let delta = currentOffset.y - lastOffset.y
@@ -118,15 +123,14 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
                 }
             } else {
                 // 유효한 스크롤 동작, 디바운스 적용
-                let newDirection = if delta > 0.5 {
+                let newDirection = if delta > deltaThreshold {
                     "위로 스크롤"
-                } else if delta < -0.5 {
+                } else if delta < -deltaThreshold {
                     "아래로 스크롤"
                 } else {
                     lastValidDirection // 기존 방향 유지
                 }
                 
-                // 디바운스: 마지막 업데이트 후 100ms 이내에는 방향 변경 무시
                 if newDirection != lastValidDirection && currentTime.timeIntervalSince(lastUpdateTime) > debounceInterval {
                     lastValidDirection = newDirection
                     scrollDirection = newDirection
@@ -140,23 +144,22 @@ class ScrollViewController: UIViewController, UIScrollViewDelegate {
         lastOffset = currentOffset
     }
     
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        // 정지 상태 설정 제거
+        if !decelerate {
+            print("Dragging ended without deceleration, maintaining direction: \(lastValidDirection)")
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        // 정지 상태 설정 제거
+        print("Deceleration ended, maintaining direction: \(lastValidDirection)")
+    }
+    
     // 항목 업데이트
     func updateItems(_ newItems: [Item]) {
         self.items = newItems
-        updateStackView()
-    }
-    
-    private func updateStackView() {
-        // 기존 뷰 제거
-        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        // 새 항목 추가
-        for item in items {
-            let label = UILabel()
-            label.text = item.title
-            label.textAlignment = .center
-            label.frame = CGRect(x: 0, y: 0, width: view.frame.width, height: 100)
-            stackView.addArrangedSubview(label)
-        }
+        tableView.reloadData()
     }
     
     func updateScrollDirection(_ direction: Binding<String>) {
