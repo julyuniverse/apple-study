@@ -7,7 +7,6 @@ struct ScrollViewOffsetsAndContentSize: Equatable {
 }
 
 struct ScrollDirectionWithBounceDetectionView: View {
-    @State private var previousScrollOffset: CGFloat = 0.0
     @State private var scrollDirection: String = "정지" // "위로", "아래로", "정지"
     @State private var lastOffset: CGPoint = .zero
     @State private var lastValidDirection: String = "정지"
@@ -44,7 +43,6 @@ struct ScrollDirectionWithBounceDetectionView: View {
                     }
                 }
             }
-            .ignoresSafeArea(.container, edges: .top)
             .onScrollGeometryChange(for: ScrollViewOffsetsAndContentSize.self, of: { geometry in
                 ScrollViewOffsetsAndContentSize(
                     contentOffset: geometry.contentOffset,
