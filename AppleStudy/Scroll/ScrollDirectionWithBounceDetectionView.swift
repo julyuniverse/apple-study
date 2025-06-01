@@ -68,15 +68,10 @@ struct ScrollDirectionWithBounceDetectionView: View {
                 print("Offset: \(currentOffset.y), Delta: \(delta), isBouncingAtTop: \(isBouncingAtTop), isBouncingAtBottom: \(isBouncingAtBottom), LastValidDirection: \(lastValidDirection), wasBouncing: \(wasBouncing)")
                 
                 if isBouncing {
-                    // 바운스 영역에서는 lastValidDirection 유지
-                    if scrollDirection != lastValidDirection {
-                        scrollDirection = lastValidDirection
-                        logScrollDirection(lastValidDirection)
-                    }
                     wasBouncing = true
                 } else {
                     // 정상 스크롤 영역
-                    if wasBouncing && abs(delta) < 1.0 {
+                    if wasBouncing {
                         // 바운스에서 정상 영역으로 전환 시 작은 delta 무시
                         if scrollDirection != lastValidDirection {
                             scrollDirection = lastValidDirection
@@ -106,12 +101,21 @@ struct ScrollDirectionWithBounceDetectionView: View {
             }
             .overlay(
                 VStack {
-                    Text("스크롤 방향: \(scrollDirection)")
+                    Text("scrollDirection: \(scrollDirection)")
                         .font(.headline)
                         .padding()
                         .background(Color.white.opacity(0.8))
                         .cornerRadius(10)
-                    Spacer()
+                    Text("lastValidDirection: \(lastValidDirection)")
+                        .font(.headline)
+                        .padding()
+                        .background(Color.white.opacity(0.8))
+                        .cornerRadius(10)
+                    Text("bouncing: \(wasBouncing)")
+                        .font(.headline)
+                        .padding()
+                        .background(Color.white.opacity(0.8))
+                        .cornerRadius(10)
                 }
                     .padding(.top, 50)
                 , alignment: .top
