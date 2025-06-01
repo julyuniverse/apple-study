@@ -6,11 +6,18 @@ struct ScrollViewOffsetsAndContentSize: Equatable {
     var bounds: CGRect
 }
 
+struct ScrollItem: Identifiable {
+    let id: Int
+    let date: Date
+    let title: String
+}
+
 struct ScrollDirectionWithBounceDetectionView: View {
     @State private var scrollDirection: String = "정지" // "위로", "아래로", "정지"
     @State private var lastOffset: CGPoint = .zero
     @State private var lastValidDirection: String = "정지"
-    @State private var items: [Item] = []
+    @State private var items: [ScrollItem] = []
+    @State private var groupedItems: [(date: Date, items: [ScrollItem])] = [] // 년월일로 그룹핑, 최신 순
     @State private var wasBouncing: Bool = false
     @State private var lastUpdateTime: Date = .distantPast
     private let debounceInterval: TimeInterval = 0.1 // 100ms 디바운스
@@ -32,14 +39,23 @@ struct ScrollDirectionWithBounceDetectionView: View {
             .background(.blue)
             .clipped()
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(items) { item in
-                        Text("id: \(item.id)")
-                            .frame(height: 50)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue.opacity(0.2))
-                            .cornerRadius(8)
-                            .padding(.vertical, 2)
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    ForEach(groupedItems, id: \.date) { group in
+                        Section(header: Text("\(group.date, formatter: dateFormatter)")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .padding(.vertical, 5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.gray.opacity(0.2))) {
+                                ForEach(group.items) { item in
+                                    Text("id: \(item.id), date: \(item.date, formatter: dateFormatter)")
+                                        .frame(height: 50)
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.blue.opacity(0.2))
+                                        .cornerRadius(8)
+                                        .padding(.vertical, 2)
+                                }
+                            }
                     }
                 }
             }
@@ -120,8 +136,24 @@ struct ScrollDirectionWithBounceDetectionView: View {
             )
         }
         .onAppear {
-            // 모의 데이터 생성
-            items = (0..<50).map { Item(id: $0, title: "항목 \($0)") }
+            var tempItems: [ScrollItem] = []
+            let calendar = Calendar.current
+            for i in 0..<50 {
+                let dayOffset = i / 2
+                let baseDate = calendar.date(byAdding: .day, value: dayOffset, to: Date()) ?? Date()
+                let randomSeconds = Double.random(in: 0..<86400)
+                let date = calendar.date(byAdding: .second, value: Int(randomSeconds), to: baseDate) ?? baseDate
+                tempItems.append(ScrollItem(id: i, date: date, title: "항목 \(i)"))
+            }
+            items = tempItems
+            
+            let grouped = Dictionary(grouping: items) { item in
+                calendar.startOfDay(for: item.date)
+            }
+            groupedItems = grouped.map { (date, items) in
+                (date: date, items: items.sorted { $0.id < $1.id })
+            }
+            .sorted { $0.date > $1.date }
         }
         .animation(.easeInOut(duration: 0.2), value: scrollDirection == "아래로 스크롤" || scrollDirection == "정지" ? 1 : 0)
     }
@@ -130,6 +162,13 @@ struct ScrollDirectionWithBounceDetectionView: View {
     private func logScrollDirection(_ direction: String) {
         print("Scroll direction logged: \(direction) at \(Date())")
     }
+    
+    // 날짜 포맷터
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
 }
 
 #Preview {
