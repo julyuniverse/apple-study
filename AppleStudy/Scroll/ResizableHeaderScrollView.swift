@@ -84,7 +84,6 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
                     headerSize = newValue + spacing
                 }
             
-            
             stickyHeader
         }
         .offset(y: -headerOffset)
