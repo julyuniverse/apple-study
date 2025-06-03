@@ -10,7 +10,6 @@
 import SwiftUI
 
 struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: View, Content: View>: View {
-    var spacing: CGFloat = 10
     @ViewBuilder var header: Header
     @ViewBuilder var stickyHeader: StickyHeader
     /// Only for header background not for the entire view
@@ -21,6 +20,7 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
     @State private var previousDragOffset: CGFloat = 0
     @State private var headerOffset: CGFloat = 0
     @State private var headerSize: CGFloat = 0
+    @State private var stickyHeaderSize: CGFloat = .zero
     @State private var scrollOffset: CGFloat = 0
     
     var body: some View {
@@ -68,20 +68,19 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
                     previousDragOffset = 0
                 })
         )
-        .safeAreaInset(edge: .top, spacing: spacing) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             CombinedHeaderView()
         }
     }
     
     @ViewBuilder
     private func CombinedHeaderView() -> some View {
-        VStack(spacing: spacing) {
+        VStack(spacing: 0) {
             header
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height
                 } action: { newValue in
-                    /// Optional (Spacing).
-                    headerSize = newValue + spacing
+                    headerSize = newValue
                 }
             
             stickyHeader

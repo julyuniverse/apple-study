@@ -85,7 +85,7 @@ struct ScrollContentView3: View {
                             .fontWeight(.bold)
                             .padding(.vertical, 5)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.gray.opacity(0.2))
+                            .background(Color.gray)
                     }
                 }
             }
