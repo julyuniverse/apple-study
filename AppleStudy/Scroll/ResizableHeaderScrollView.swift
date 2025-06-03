@@ -20,56 +20,75 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
     @State private var previousDragOffset: CGFloat = 0
     @State private var headerOffset: CGFloat = 0
     @State private var headerSize: CGFloat = 0
-    @State private var stickyHeaderSize: CGFloat = .zero
+    @State private var stickyHeaderSize: CGFloat = 0
     @State private var scrollOffset: CGFloat = 0
     
     var body: some View {
-        ScrollView(.vertical) {
-            content
-        }
-        .frame(maxWidth: .infinity)
-        // As you can see, when the scroll offset is less than the header height, and our condition on gesture end was never met, leaving a gap like this. To solve this, add a condition to the gesture end that if the scroll offset is less than the header height, reset the header offset to zero.
-        // (보시다시피, 스크롤 오프셋이 헤더 높이보다 작을 때 제스처 끝의 조건이 충족되지 않아 이와 같은 틈이 발생합니다. 이 문제를 해결하려면 제스처 끝에 스크롤 오프셋이 헤더 높이보다 작으면 헤더 오프셋을 0으로 재설정하는 조건을 추가합니다.)
-        .onScrollGeometryChange(for: CGFloat.self, of: {
-            $0.contentOffset.y + $0.contentInsets.top
-        }, action: { oldValue, newValue in
-            scrollOffset = newValue
-        })
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 10)
-                .onChanged({ value in
-                    /// Adjusting the minimun distanse value
-                    /// Thus it starts from 0.
-                    // The reason behind using the value "50" is that it initiates the resizing process after a certain period, allowing for scrolling. However, if you desire an instantaneous resizing effect, you can replace this value with "10," which is the same as the "minimumDistance" value.
-                    // ("50" 값을 사용하는 이유는 일정 시간 후에 크기 조절 프로세스를 시작하여 스크롤을 가능하게 하기 때문입니다. 하지만 즉각적인 크기 조절 효과를 원하면 이 값을 "minimumDistance" 값과 동일한 "10"으로 바꿀 수 있습니다.)
-                    let dragOffset = -max(0, abs(value.translation.height) - 50) * (value.translation.height < 0 ? -1 : 1)
-                    
-                    previousDragOffset = currentDragOffset
-                    currentDragOffset = dragOffset
-                    
-                    let deltaOffset = (currentDragOffset - previousDragOffset).rounded()
-                    
-                    // We need to stop resizing the view to only the header height and make the "stickyHeader" content visible. To achieve this, we need to know the header height. With the help of the new "onGeometryChange" modifier, we can read the view's bounds and rect value.
-                    // (뷰 크기를 헤더 높이로만 조정하는 것을 중단하고 "stickyHeader" 콘텐츠를 표시해야 합니다. 이를 위해서는 헤더 높이를 알아야 합니다. 새로운 "onGeometryChange" 수정자를 사용하면 뷰의 경계와 사각형 값을 읽을 수 있습니다.)
-                    headerOffset = max(min(headerOffset + deltaOffset, headerSize), 0)
-                }).onEnded({ _ in
-                    // When a user stops interacting while resizing the view, the view will appear like this. To resolve this issue, we need to write a condition that evaluates and adjusts the headerOffset value when the gesture ends.
-                    // (사용자가 뷰 크기를 조절하는 동안 상호작용을 중단하면 뷰가 이렇게 표시됩니다. 이 문제를 해결하려면 제스처가 종료될 때 headerOffset 값을 평가하고 조정하는 조건을 작성해야 합니다.)
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        if headerOffset > (headerSize * 0.5) && scrollOffset > headerSize {
-                            headerOffset = headerSize
-                        } else {
-                            headerOffset = 0
+        ZStack(alignment: .top) {
+            CombinedHeaderView()
+            VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: headerSize + stickyHeaderSize - headerOffset)
+                ScrollView(.vertical) {
+                    content
+                }
+                .frame(maxWidth: .infinity)
+                // As you can see, when the scroll offset is less than the header height, and our condition on gesture end was never met, leaving a gap like this. To solve this, add a condition to the gesture end that if the scroll offset is less than the header height, reset the header offset to zero.
+                // (보시다시피, 스크롤 오프셋이 헤더 높이보다 작을 때 제스처 끝의 조건이 충족되지 않아 이와 같은 틈이 발생합니다. 이 문제를 해결하려면 제스처 끝에 스크롤 오프셋이 헤더 높이보다 작으면 헤더 오프셋을 0으로 재설정하는 조건을 추가합니다.)
+                .onScrollGeometryChange(for: CGFloat.self, of: {
+                    $0.contentOffset.y + $0.contentInsets.top
+                }, action: { oldValue, newValue in
+                    scrollOffset = newValue
+                    // Add a small animation to headerOffset change when scrollOffset is involved
+                    // This helps to smooth out the transition when scrolling dictates the header position
+                    if newValue < headerSize + stickyHeaderSize && headerOffset > 0 && currentDragOffset == 0 {
+                        // Only snap to 0 if we're scrolling up past the header and not currently dragging
+                        if newValue <= 0 {
+                            withAnimation(.easeInOut(duration: 0.1)) {
+                                headerOffset = 0
+                            }
                         }
                     }
-                    
-                    /// Resetting Offset Data
-                    currentDragOffset = 0
-                    previousDragOffset = 0
                 })
-        )
-        .safeAreaInset(edge: .top, spacing: 0) {
-            CombinedHeaderView()
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged({ value in
+                            /// Adjusting the minimun distanse value
+                            /// Thus it starts from 0.
+                            // The reason behind using the value "50" is that it initiates the resizing process after a certain period, allowing for scrolling. However, if you desire an instantaneous resizing effect, you can replace this value with "10," which is the same as the "minimumDistance" value.
+                            // ("50" 값을 사용하는 이유는 일정 시간 후에 크기 조절 프로세스를 시작하여 스크롤을 가능하게 하기 때문입니다. 하지만 즉각적인 크기 조절 효과를 원하면 이 값을 "minimumDistance" 값과 동일한 "10"으로 바꿀 수 있습니다.)
+                            
+                            // It's often better to avoid `rounded()` directly on the drag offset for smoother animation.
+                            // Let the system handle the precise rendering.
+                            let dragOffset = -max(0, abs(value.translation.height) - 50) * (value.translation.height < 0 ? -1 : 1)
+                            
+                            previousDragOffset = currentDragOffset
+                            currentDragOffset = dragOffset
+                            
+                            let deltaOffset = currentDragOffset - previousDragOffset
+                            
+                            // Apply animation directly to headerOffset changes during drag for smoother feedback
+                            withAnimation(.interactiveSpring(response: 0.2, dampingFraction: 0.8, blendDuration: 0)) {
+                                headerOffset = max(min(headerOffset + deltaOffset, headerSize), 0)
+                            }
+                        }).onEnded({ _ in
+                            // When a user stops interacting while resizing the view, the view will appear like this. To resolve this issue, we need to write a condition that evaluates and adjusts the headerOffset value when the gesture ends.
+                            // (사용자가 뷰 크기를 조절하는 동안 상호작용을 중단하면 뷰가 이렇게 표시됩니다. 이 문제를 해결하려면 제스처가 종료될 때 headerOffset 값을 평가하고 조정하는 조건을 작성해야 합니다.)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                if headerOffset > (headerSize * 0.5) && scrollOffset > (headerSize + stickyHeaderSize - headerOffset - 1) { // Adjusted condition
+                                    headerOffset = headerSize
+                                } else if scrollOffset < (headerSize + stickyHeaderSize - headerOffset) { // Added condition for snapping back when scrolled up
+                                    headerOffset = 0
+                                }
+                            }
+                            
+                            /// Resetting Offset Data
+                            currentDragOffset = 0
+                            previousDragOffset = 0
+                        })
+                )
+            }
+            
         }
     }
     
@@ -84,6 +103,11 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
                 }
             
             stickyHeader
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: { newValue in
+                    stickyHeaderSize = newValue
+                }
         }
         .offset(y: -headerOffset)
         .clipped()
