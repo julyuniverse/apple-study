@@ -88,7 +88,6 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
                         })
                 )
             }
-            
         }
     }
     
@@ -118,7 +117,6 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
         }
         // By applying the clipped modifier at the bottom, the background will also be clipped. We need the background to include the safeArea edges, so let's apply the offset and clipped modifier before the background. Additionally, we should apply only the offset modifier to the background without the clipped modifier. This way, the background won't be clipped.
         // (하단에 clipped 수정자를 적용하면 배경도 잘립니다. 배경에 safeArea 모서리가 포함되어야 하므로, 배경보다 먼저 offset 수정자와 clipped 수정자를 적용하겠습니다. 또한, clipped 수정자를 적용하지 않고 offset 수정자만 배경에 적용해야 합니다. 이렇게 하면 배경이 잘리지 않습니다.)
-        
     }
 }
 
