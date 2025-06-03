@@ -26,9 +26,12 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
     var body: some View {
         ZStack(alignment: .top) {
             CombinedHeaderView()
+            
             VStack(spacing: 0) {
+                
                 Color.clear
                     .frame(height: headerSize + stickyHeaderSize - headerOffset)
+                
                 ScrollView(.vertical) {
                     content
                 }
@@ -39,6 +42,7 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
                     $0.contentOffset.y + $0.contentInsets.top
                 }, action: { oldValue, newValue in
                     scrollOffset = newValue
+                    
                     // Add a small animation to headerOffset change when scrollOffset is involved
                     // This helps to smooth out the transition when scrolling dictates the header position
                     if newValue < headerSize + stickyHeaderSize && headerOffset > 0 && currentDragOffset == 0 {
@@ -72,12 +76,10 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
                                 headerOffset = max(min(headerOffset + deltaOffset, headerSize), 0)
                             }
                         }).onEnded({ _ in
-                            // When a user stops interacting while resizing the view, the view will appear like this. To resolve this issue, we need to write a condition that evaluates and adjusts the headerOffset value when the gesture ends.
-                            // (사용자가 뷰 크기를 조절하는 동안 상호작용을 중단하면 뷰가 이렇게 표시됩니다. 이 문제를 해결하려면 제스처가 종료될 때 headerOffset 값을 평가하고 조정하는 조건을 작성해야 합니다.)
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                if headerOffset > (headerSize * 0.5) && scrollOffset > (headerSize + stickyHeaderSize - headerOffset - 1) { // Adjusted condition
+                                if headerOffset > (headerSize * 0.5) && scrollOffset > headerSize {
                                     headerOffset = headerSize
-                                } else if scrollOffset < (headerSize + stickyHeaderSize - headerOffset) { // Added condition for snapping back when scrolled up
+                                } else {
                                     headerOffset = 0
                                 }
                             }
