@@ -13,6 +13,20 @@ struct ScrollContentView3: View {
     
     var body: some View {
         ResizableHeaderScrollView {
+            // MARK: Fixed Top Header (최상단 고정 헤더)
+            HStack {
+                Text("고정 헤더")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                Spacer()
+                Button("설정") {
+                    // Action for fixed top header
+                }
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 10)
+            .background(Color.yellow.opacity(0.3)) // 고정 헤더 배경 색상
+        } header: {
             HStack(spacing: 15) {
                 Button {
                     

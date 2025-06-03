@@ -9,7 +9,8 @@
 
 import SwiftUI
 
-struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: View, Content: View>: View {
+struct ResizableHeaderScrollView<FixedTopHeader: View, Header: View, StickyHeader: View, Background: View, Content: View>: View {
+    @ViewBuilder var fixedTopHeader: FixedTopHeader
     @ViewBuilder var header: Header
     @ViewBuilder var stickyHeader: StickyHeader
     /// Only for header background not for the entire view
@@ -19,6 +20,7 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
     @State private var currentDragOffset: CGFloat = 0
     @State private var previousDragOffset: CGFloat = 0
     @State private var headerOffset: CGFloat = 0
+    @State private var fixedTopHeaderSize: CGFloat = 0
     @State private var headerSize: CGFloat = 0
     @State private var stickyHeaderSize: CGFloat = 0
     @State private var scrollOffset: CGFloat = 0
@@ -30,7 +32,7 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
             VStack(spacing: 0) {
                 
                 Color.clear
-                    .frame(height: headerSize + stickyHeaderSize - headerOffset)
+                    .frame(height: fixedTopHeaderSize + (headerSize + stickyHeaderSize - headerOffset))
                 
                 ScrollView(.vertical) {
                     content
@@ -96,22 +98,34 @@ struct ResizableHeaderScrollView<Header: View, StickyHeader: View, Background: V
     @ViewBuilder
     private func CombinedHeaderView() -> some View {
         VStack(spacing: 0) {
-            header
+            // MARK: 최상단 고정 헤더
+            fixedTopHeader
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height
                 } action: { newValue in
-                    headerSize = newValue
+                    fixedTopHeaderSize = newValue
                 }
             
-            stickyHeader
-                .onGeometryChange(for: CGFloat.self) {
-                    $0.size.height
-                } action: { newValue in
-                    stickyHeaderSize = newValue
-                }
+            // MARK: 스크롤에 따라 오르내리는 헤더 (기존 header + stickyHeader)
+            VStack(spacing: 0) {
+                header
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: { newValue in
+                        headerSize = newValue
+                    }
+                
+                stickyHeader
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: { newValue in
+                        stickyHeaderSize = newValue
+                    }
+            }
+            .offset(y: -headerOffset) // 이 그룹에만 오프셋 적용
+            .clipped() // 이 그룹만 클리핑
         }
-        .offset(y: -headerOffset)
-        .clipped()
+        // CombinedHeaderView의 배경은 fixedTopHeader의 높이까지 포함하도록 수정
         .background {
             background
                 .ignoresSafeArea()
